@@ -1,0 +1,13 @@
+{
+  "admin": [
+    "agenda",
+    "appointments",
+    "clients",
+    "services",
+    "hours"
+  ],
+  "viewer": [
+    "agenda",
+    "appointments"
+  ]
+}

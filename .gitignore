@@ -1,0 +1,32 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment & secrets
+.env
+data/business_config.json
+
+# Database
+*.db
+*.db-wal
+*.db-shm
+
+# Node
+node_modules/
+
+# WhatsApp session (contains auth tokens)
+whatsapp-bridge/.wwebjs_auth/
+whatsapp-bridge/.wwebjs_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Claude
+.claude/

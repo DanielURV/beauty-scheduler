@@ -1,0 +1,10 @@
+{
+  "blocked": "Hola 👋 Debido a incidencias recientes con tus citas, la reserva online no está disponible para ti en este momento.\n\nPara gestionar tu próxima cita te pedimos que te pases por el salón o nos llames directamente. Estaremos encantados de atenderte en persona. 😊",
+  "ask_name": "¿Cuál es tu nombre? 😊",
+  "welcome_menu": "¿En qué te puedo ayudar?\n\n1️⃣ Agendar una cita\n2️⃣ Ver mis citas\n3️⃣ Cancelar una cita\n4️⃣ Preguntas / Información\n\nResponde con el número de tu opción 👇",
+  "appointment_confirmed_note": "📍 Recuerda llegar 5 minutos antes.\nTe enviaremos un recordatorio 24 horas antes.",
+  "appointment_cancelled": "✅ Tu cita de *{servicio}* ha sido cancelada.\n\nSi deseas agendar otra, escribe *menu*.",
+  "no_slots": "😔 Lo siento, no hay horarios disponibles para esa fecha.\n\n¿Deseas buscar en otra fecha? Escribe *1* para sí o *menu* para volver al inicio.",
+  "invalid_option": "❓ No entendí tu respuesta. Por favor escribe el número de la opción deseada o *menu* para volver al inicio.",
+  "reminder": "🔔 Recordatorio: mañana tienes cita de *{servicio}* a las *{hora}*. ¡Te esperamos en {negocio}!"
+}

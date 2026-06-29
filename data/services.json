@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Corte de cabello",
+    "description": "Corte personalizado según tu estilo y tipo de cabello",
+    "duration_minutes": 45,
+    "price": 35000
+  },
+  {
+    "name": "Tinte completo",
+    "description": "Coloración completa con productos profesionales",
+    "duration_minutes": 120,
+    "price": 90000
+  },
+  {
+    "name": "Mechas / Balayage",
+    "description": "Técnica de iluminación natural o dramática",
+    "duration_minutes": 150,
+    "price": 130000
+  },
+  {
+    "name": "Alisado / Keratina",
+    "description": "Tratamiento alisador con keratina profesional",
+    "duration_minutes": 180,
+    "price": 180000
+  },
+  {
+    "name": "Manicure",
+    "description": "Limpieza, forma y esmaltado de uñas",
+    "duration_minutes": 60,
+    "price": 25000
+  },
+  {
+    "name": "Pedicure",
+    "description": "Tratamiento completo de pies con esmaltado",
+    "duration_minutes": 75,
+    "price": 35000
+  },
+  {
+    "name": "Depilación con cera",
+    "description": "Depilación de piernas, axilas o zona bikini",
+    "duration_minutes": 45,
+    "price": 30000
+  },
+  {
+    "name": "Tratamiento facial",
+    "description": "Limpieza profunda, hidratación y mascarilla",
+    "duration_minutes": 90,
+    "price": 75000
+  }
+]

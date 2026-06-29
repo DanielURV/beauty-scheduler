@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Admin — Beauty Scheduler</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
+<style>
+:root { --bs-primary: #6f42c1; --bs-primary-rgb: 111,66,193; }
+body { background: #f4f5f7; font-family: 'Segoe UI', sans-serif; }
+
+/* ── Sidebar ── */
+#sidebar {
+  width: 230px; min-height: 100vh; flex-shrink: 0;
+  background: linear-gradient(180deg, #4a148c 0%, #7b1fa2 60%, #6f42c1 100%);
+  display: flex; flex-direction: column;
+}
+#sidebar .brand { padding: 20px 16px 14px; border-bottom: 1px solid rgba(255,255,255,.15); }
+#sidebar .brand h5 { margin: 0; color: #fff; font-weight: 700; font-size: .95rem; }
+#sidebar .brand small { color: rgba(255,255,255,.6); font-size: .75rem; }
+#sidebar .nav-link {
+  color: rgba(255,255,255,.8); border-radius: 8px; margin: 2px 8px;
+  padding: 9px 12px; font-size: .875rem; display: flex; align-items: center; gap: 10px;
+  transition: background .15s;
+}
+#sidebar .nav-link:hover { background: rgba(255,255,255,.12); color: #fff; }
+#sidebar .nav-link.active { background: rgba(255,255,255,.2); color: #fff; font-weight: 600; }
+#sidebar .sidebar-footer { padding: 12px; border-top: 1px solid rgba(255,255,255,.15); margin-top: auto; }
+
+/* ── Content ── */
+#content { flex: 1; min-width: 0; padding: 24px; overflow-x: auto; }
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── Cards ── */
+.stat-card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.stat-card .icon { width: 48px; height: 48px; border-radius: 12px; display:flex; align-items:center; justify-content:center; font-size: 1.4rem; }
+
+/* ── Calendar ── */
+#calendarEl { min-height: 600px; }
+.fc-event { cursor: pointer; border-radius: 6px !important; font-size: .8rem; }
+.fc-event-title { font-weight: 500; padding: 1px 2px; white-space: normal; }
+.fc .fc-button-primary { background: #6f42c1; border-color: #6f42c1; }
+.fc .fc-button-primary:hover { background: #5a32a3; border-color: #5a32a3; }
+.fc .fc-button-primary:not(:disabled).fc-button-active { background: #4a148c; border-color: #4a148c; }
+
+/* ── Tables ── */
+.table-hover tbody tr:hover { background: rgba(111,66,193,.05); }
+.badge-status-confirmed { background: #198754; }
+.badge-status-pending    { background: #fd7e14; }
+.badge-status-completed  { background: #6c757d; }
+.badge-status-cancelled  { background: #dc3545; }
+.badge-status-no_show    { background: #343a40; }
+
+/* ── Login ── */
+#loginScreen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #4a148c 0%, #6f42c1 50%, #e91e63 100%);
+}
+#loginScreen .card { border: none; border-radius: 16px; width: 100%; max-width: 380px; }
+
+/* ── Days pills ── */
+.day-pill { display:inline-flex; align-items:center; justify-content:center;
+  width:32px; height:32px; border-radius:50%; font-size:.75rem; font-weight:600;
+  background:#e9ecef; color:#495057; }
+.day-pill.active { background:#6f42c1; color:#fff; }
+
+/* ── Toast ── */
+#mainToast { z-index: 9999; }
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  #sidebar { width: 60px; }
+  #sidebar .brand h5, #sidebar .nav-link span, #sidebar .sidebar-footer .btn-text { display:none; }
+  #sidebar .nav-link { justify-content:center; margin:2px 4px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ LOGIN ═══════════════════ -->
+<div id="loginScreen">
+  <div class="card shadow-xl p-2">
+    <div class="card-body p-4">
+      <div class="text-center mb-4">
+        <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#6f42c1,#e91e63);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:2rem" id="loginEmoji">
+          ✂️
+        </div>
+        <h4 class="fw-bold mb-0">Panel Admin</h4>
+        <p class="text-muted small">Beauty Scheduler</p>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Usuario</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-person"></i></span>
+          <input type="text" id="loginUser" class="form-control form-control-lg" placeholder="admin">
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Contraseña</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-lock"></i></span>
+          <input type="password" id="loginPw" class="form-control form-control-lg" placeholder="••••••••">
+        </div>
+      </div>
+      <p id="loginError" class="text-danger small mb-2" style="display:none"></p>
+      <button class="btn btn-primary w-100 btn-lg fw-semibold" onclick="doLogin()">
+        <i class="bi bi-box-arrow-in-right me-2"></i>Entrar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MAIN APP ═══════════════════ -->
+<div id="mainApp" style="display:none; min-height:100vh;" class="d-flex">
+
+  <!-- ── Sidebar ── -->
+  <nav id="sidebar">
+    <div class="brand">
+      <h5><span id="sidebarEmoji" class="me-2">✂️</span><span id="bizName">Admin</span></h5>
+      <small id="sidebarUser" class="d-flex align-items-center gap-1">
+        <i class="bi bi-person-circle"></i>
+        <span id="sidebarUsername">—</span>
+        <span id="sidebarRoleBadge" class="badge ms-1" style="font-size:.65rem"></span>
+      </small>
+    </div>
+    <ul class="nav flex-column pt-2 flex-grow-1">
+      <li><a class="nav-link active" data-sec="agenda" onclick="showSec('agenda')"><i class="bi bi-calendar3"></i><span>Agenda</span></a></li>
+      <li><a class="nav-link" data-sec="dashboard" onclick="showSec('dashboard')"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a></li>
+      <li><a class="nav-link" data-sec="appointments" onclick="showSec('appointments')"><i class="bi bi-list-check"></i><span>Lista de Citas</span></a></li>
+      <li><a class="nav-link" data-sec="clients" onclick="showSec('clients')"><i class="bi bi-people"></i><span>Clientes</span></a></li>
+      <li><a class="nav-link" data-sec="services" onclick="showSec('services')"><i class="bi bi-scissors"></i><span>Servicios</span></a></li>
+      <li><a class="nav-link" data-sec="hours" onclick="showSec('hours')"><i class="bi bi-clock"></i><span>Horarios</span></a></li>
+      <li><a class="nav-link" data-sec="integrations" onclick="showSec('integrations')"><i class="bi bi-link-45deg"></i><span>Integraciones</span></a></li>
+      <li id="navUsers" style="display:none"><a class="nav-link" data-sec="users" onclick="showSec('users')"><i class="bi bi-person-gear"></i><span>Usuarios</span></a></li>
+      <li id="navViews" style="display:none"><a class="nav-link" data-sec="views" onclick="showSec('views')"><i class="bi bi-eye-slash"></i><span>Vistas</span></a></li>
+      <li id="navMessages" style="display:none"><a class="nav-link" data-sec="messages" onclick="showSec('messages')"><i class="bi bi-chat-left-text"></i><span>Mensajes</span></a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button class="btn btn-outline-light btn-sm w-100" onclick="doLogout()">
+        <i class="bi bi-box-arrow-right"></i><span class="btn-text ms-2">Salir</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── Content ── -->
+  <div id="content">
+
+    <!-- ══ AGENDA ══ -->
+    <div id="sec-agenda" class="section active">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0 fw-bold"><i class="bi bi-calendar3 me-2 text-primary"></i>Agenda</h4>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-danger role-write" onclick="openBlockModal()">
+            <i class="bi bi-slash-circle me-1"></i>Bloquear horario
+          </button>
+          <button class="btn btn-primary role-write" onclick="openNewApptModal()">
+            <i class="bi bi-plus-lg me-1"></i>Nueva Cita
+          </button>
+        </div>
+      </div>
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-3">
+          <div id="calendarEl"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ DASHBOARD ══ -->
+    <div id="sec-dashboard" class="section">
+      <h4 class="mb-3 fw-bold"><i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard</h4>
+      <div class="row g-3 mb-4" id="statsRow">
+        <!-- Stats cards inserted by JS -->
+      </div>
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white fw-semibold border-bottom-0 pt-3">
+          <i class="bi bi-calendar-day me-2 text-primary"></i>Citas de Hoy
+        </div>
+        <div id="todayTable" class="card-body p-0"></div>
+      </div>
+    </div>
+
+    <!-- ══ LISTA CITAS ══ -->
+    <div id="sec-appointments" class="section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0 fw-bold"><i class="bi bi-list-check me-2 text-primary"></i>Lista de Citas</h4>
+        <button class="btn btn-primary role-write" onclick="openNewApptModal()">
+          <i class="bi bi-plus-lg me-1"></i>Nueva Cita
+        </button>
+      </div>
+      <!-- Filters -->
+      <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body py-2">
+          <div class="row g-2 align-items-end">
+            <div class="col-auto">
+              <label class="form-label small mb-1">Desde</label>
+              <input type="date" id="filterFrom" class="form-control form-control-sm" onchange="loadAppointments()">
+            </div>
+            <div class="col-auto">
+              <label class="form-label small mb-1">Hasta</label>
+              <input type="date" id="filterTo" class="form-control form-control-sm" onchange="loadAppointments()">
+            </div>
+            <div class="col-auto">
+              <label class="form-label small mb-1">Estado</label>
+              <select id="filterStatus" class="form-select form-select-sm" onchange="loadAppointments()">
+                <option value="">Todos</option>
+                <option value="confirmed">Confirmada</option>
+                <option value="pending">Pendiente</option>
+                <option value="completed">Completada</option>
+                <option value="cancelled">Cancelada</option>
+                <option value="no_show">No presentado</option>
+              </select>
+            </div>
+            <div class="col">
+              <input type="text" id="filterQ" class="form-control form-control-sm" placeholder="Buscar cliente..." oninput="loadAppointments()">
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-sm btn-outline-secondary" onclick="clearApptFilters()">
+                <i class="bi bi-x-circle"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+          <div id="apptTable"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CLIENTES ══ -->
+    <div id="sec-clients" class="section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0 fw-bold"><i class="bi bi-people me-2 text-primary"></i>Clientes</h4>
+        <input type="text" id="clientSearch" class="form-control form-control-sm w-auto" placeholder="Buscar..." oninput="loadClients()">
+      </div>
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+          <div id="clientTable"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SERVICIOS ══ -->
+    <div id="sec-services" class="section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0 fw-bold"><i class="bi bi-scissors me-2 text-primary"></i>Servicios</h4>
+        <button class="btn btn-primary role-write" onclick="openServiceModal()">
+          <i class="bi bi-plus-lg me-1"></i>Nuevo Servicio
+        </button>
+      </div>
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+          <div id="servicesTable"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ HORARIOS ══ -->
+    <div id="sec-hours" class="section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0 fw-bold"><i class="bi bi-clock me-2 text-primary"></i>Horarios</h4>
+        <button class="btn btn-primary role-write" onclick="openHoursModal()">
+          <i class="bi bi-plus-lg me-1"></i>Nuevo Horario
+        </button>
+      </div>
+      <div class="alert alert-info border-0 shadow-sm small mb-3">
+        <i class="bi bi-info-circle me-2"></i>
+        Los horarios con <strong>mayor prioridad</strong> tienen precedencia. Usa fechas de validez para horarios de temporada (ej. verano). Sin fechas = siempre aplica.
+      </div>
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+          <div id="hoursTable"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ INTEGRACIONES ══ -->
+    <div id="sec-integrations" class="section">
+      <h4 class="mb-3 fw-bold"><i class="bi bi-link-45deg me-2 text-primary"></i>Integraciones de Calendario</h4>
+      <div class="row g-3">
+        <!-- iCal URL card -->
+        <div class="col-12">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-semibold pt-3 border-0">
+              <i class="bi bi-calendar-check me-2 text-success"></i>Feed de Calendario (iCal)
+            </div>
+            <div class="card-body">
+              <p class="text-muted small mb-2">Copia esta URL y añádela como calendario externo en tu app favorita. Se actualiza automáticamente cada hora.</p>
+              <div class="input-group mb-3">
+                <input type="text" id="icalUrl" class="form-control font-monospace small" readonly>
+                <button class="btn btn-outline-primary" onclick="copyIcalUrl()"><i class="bi bi-clipboard"></i></button>
+                <a id="icalDownload" href="#" class="btn btn-outline-success" download="citas.ics"><i class="bi bi-download me-1"></i>Descargar</a>
+              </div>
+              <div class="row g-3 mt-1">
+                <!-- Google Calendar -->
+                <div class="col-md-4">
+                  <div class="card border h-100">
+                    <div class="card-body text-center p-3">
+                      <div style="font-size:2rem;margin-bottom:8px">📅</div>
+                      <h6 class="fw-bold">Google Calendar</h6>
+                      <ol class="text-start small text-muted mb-0" style="padding-left:18px">
+                        <li>Abre Google Calendar en el ordenador</li>
+                        <li>En "Otros calendarios" haz clic en <strong>+</strong></li>
+                        <li>Elige <em>"Desde URL"</em></li>
+                        <li>Pega la URL de arriba</li>
+                        <li>Clic en <em>"Añadir calendario"</em></li>
+                      </ol>
+                      <div class="alert alert-warning small p-2 mt-2 mb-0">
+                        ⚠️ Requiere que el servidor sea accesible desde internet. Ver nota abajo.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Apple Calendar -->
+                <div class="col-md-4">
+                  <div class="card border h-100">
+                    <div class="card-body text-center p-3">
+                      <div style="font-size:2rem;margin-bottom:8px">🍎</div>
+                      <h6 class="fw-bold">Apple Calendar</h6>
+                      <ol class="text-start small text-muted mb-0" style="padding-left:18px">
+                        <li>Abre Calendario en Mac o iPhone</li>
+                        <li>Menú <em>Archivo → Nueva suscripción</em></li>
+                        <li>Pega la URL de arriba</li>
+                        <li>Configura el intervalo de actualización</li>
+                        <li>Clic en <em>OK</em></li>
+                      </ol>
+                      <div class="badge bg-success mt-2">✓ Funciona en red local</div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Outlook -->
+                <div class="col-md-4">
+                  <div class="card border h-100">
+                    <div class="card-body text-center p-3">
+                      <div style="font-size:2rem;margin-bottom:8px">📧</div>
+                      <h6 class="fw-bold">Outlook</h6>
+                      <ol class="text-start small text-muted mb-0" style="padding-left:18px">
+                        <li>Abre Outlook (escritorio o web)</li>
+                        <li>Ve a <em>Calendario</em></li>
+                        <li>Clic en <em>"Añadir calendario"</em></li>
+                        <li>Elige <em>"Desde Internet"</em></li>
+                        <li>Pega la URL de arriba</li>
+                      </ol>
+                      <div class="badge bg-success mt-2">✓ Funciona en red local</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="emojiConfigBox" class="alert alert-light border mt-3 mb-3 d-none">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div>
+                    <i class="bi bi-emoji-smile me-2 text-primary"></i>
+                    <strong>Icono del negocio</strong>
+                    <div class="text-muted small mt-1">Emoji que aparece en el panel y en el menú del bot.</div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <input type="text" id="bizEmojiInput" class="form-control form-control-sm text-center fw-bold" style="width:70px;font-size:1.4rem" maxlength="4" placeholder="✂️">
+                    <button class="btn btn-outline-primary btn-sm" onclick="saveBizEmoji()">
+                      <i class="bi bi-check-lg me-1"></i>Guardar
+                    </button>
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <div class="text-muted small mb-1">Sugerencias:</div>
+                  <div class="d-flex flex-wrap gap-1" id="emojiSuggestions"></div>
+                </div>
+              </div>
+
+              <div id="reminderTestBox" class="alert alert-light border mt-3 mb-3 d-none">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <i class="bi bi-bell me-2 text-primary"></i>
+                    <strong>Probar recordatorio</strong>
+                    <div class="text-muted small mt-1">Envía un recordatorio de prueba al teléfono del negocio (<span id="reminderTestPhone"></span>).</div>
+                  </div>
+                  <button class="btn btn-outline-primary btn-sm ms-3" onclick="sendTestReminder()">
+                    <i class="bi bi-send me-1"></i>Enviar prueba
+                  </button>
+                </div>
+              </div>
+              <div class="alert alert-secondary small mt-3 mb-0">
+                <i class="bi bi-lightbulb me-2"></i>
+                <strong>¿Google Calendar no carga?</strong> El servidor debe ser accesible desde internet.
+                Puedes usar <strong>ngrok</strong> (<code>ngrok http 8000</code>) para obtener una URL pública temporal gratuita,
+                o instalar el servidor en un VPS/servidor propio.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MENSAJES ══ -->
+    <div id="sec-messages" class="section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0 fw-bold"><i class="bi bi-chat-left-text me-2 text-primary"></i>Mensajes del Bot</h4>
+        <button class="btn btn-primary" onclick="saveMessages()"><i class="bi bi-save me-1"></i>Guardar cambios</button>
+      </div>
+      <div class="alert alert-info border-0 shadow-sm small mb-3">
+        <i class="bi bi-info-circle me-2"></i>
+        Edita aquí los textos que envía el bot por WhatsApp. Las variables entre llaves como <code>{servicio}</code>, <code>{hora}</code>, <code>{negocio}</code> se sustituyen automáticamente.
+      </div>
+      <div id="messagesForm" class="row g-3"></div>
+    </div>
+
+    <!-- ══ VISTAS ══ -->
+    <div id="sec-views" class="section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0 fw-bold"><i class="bi bi-eye-slash me-2 text-primary"></i>Control de Vistas por Rol</h4>
+        <button class="btn btn-primary" onclick="saveVisibility()"><i class="bi bi-save me-1"></i>Guardar cambios</button>
+      </div>
+      <div class="alert alert-info border-0 shadow-sm small mb-3">
+        <i class="bi bi-info-circle me-2"></i>
+        Elige qué secciones del panel puede ver cada rol. <strong>Superadmin</strong> siempre ve todo.
+        Los cambios se aplican en el próximo inicio de sesión del usuario afectado.
+      </div>
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Sección</th>
+                  <th class="text-center">Admin</th>
+                  <th class="text-center">Viewer</th>
+                </tr>
+              </thead>
+              <tbody id="visibilityRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ USUARIOS ══ -->
+    <div id="sec-users" class="section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0 fw-bold"><i class="bi bi-person-gear me-2 text-primary"></i>Gestión de Usuarios</h4>
+        <button class="btn btn-primary" onclick="openUserModal()"><i class="bi bi-plus-lg me-1"></i>Nuevo Usuario</button>
+      </div>
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-0"><div id="usersTable"></div></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /mainApp -->
+
+<!-- ═══ MODAL: Nueva/Editar Cita ═══ -->
+<div class="modal fade" id="apptModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold" id="apptModalTitle"><i class="bi bi-calendar-plus me-2"></i>Nueva Cita</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Teléfono del cliente *</label>
+            <input type="tel" id="apptPhone" class="form-control" placeholder="+34600123456" oninput="searchClient()">
+            <div id="clientSuggestion" class="form-text text-success fw-semibold"></div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Nombre del cliente</label>
+            <input type="text" id="apptName" class="form-control" placeholder="María García">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Servicio *</label>
+            <select id="apptService" class="form-select"></select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Fecha *</label>
+            <input type="date" id="apptDate" class="form-control">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Hora *</label>
+            <input type="time" id="apptTime" class="form-control" step="1800">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Notas (opcional)</label>
+            <textarea id="apptNotes" class="form-control" rows="2" placeholder="Observaciones especiales..."></textarea>
+          </div>
+        </div>
+        <p id="apptError" class="text-danger small mt-2 mb-0" style="display:none"></p>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary fw-semibold px-4" onclick="saveAppt()">
+          <i class="bi bi-check-lg me-1"></i>Guardar Cita
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Detalle Cita ═══ -->
+<div class="modal fade" id="apptDetailModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header" id="detailHeader">
+        <h5 class="modal-title fw-bold"><i class="bi bi-calendar-event me-2"></i>Detalle de Cita</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4" id="detailBody"><!-- filled by JS --></div>
+      <div class="modal-footer border-0" id="detailFooter"><!-- filled by JS --></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Servicio ═══ -->
+<div class="modal fade" id="serviceModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold" id="serviceModalTitle"><i class="bi bi-scissors me-2"></i>Servicio</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">Nombre *</label>
+            <input type="text" id="svcName" class="form-control" placeholder="Corte de cabello">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Descripción</label>
+            <textarea id="svcDesc" class="form-control" rows="2" placeholder="Descripción breve del servicio..."></textarea>
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-semibold">Duración (minutos) *</label>
+            <input type="number" id="svcDuration" class="form-control" min="5" step="5" value="60">
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-semibold">Precio *</label>
+            <div class="input-group">
+              <span class="input-group-text">€</span>
+              <input type="number" id="svcPrice" class="form-control" min="0" step="0.01" value="0">
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="svcActive" checked>
+              <label class="form-check-label fw-semibold" for="svcActive">Activo (visible en el bot)</label>
+            </div>
+          </div>
+        </div>
+        <p id="svcError" class="text-danger small mt-2 mb-0" style="display:none"></p>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary fw-semibold px-4" onclick="saveService()">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Bloquear horario ═══ -->
+<div class="modal fade" id="blockModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title fw-bold"><i class="bi bi-slash-circle me-2"></i>Bloquear horario</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">Día *</label>
+            <input type="date" id="blkDate" class="form-control">
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-semibold">Desde *</label>
+            <input type="time" id="blkStart" class="form-control">
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-semibold">Hasta *</label>
+            <input type="time" id="blkEnd" class="form-control">
+          </div>
+          <div class="col-12" id="blkBreakInfo" style="display:none">
+            <div class="alert alert-warning py-2 px-3 mb-0 small">
+              <i class="bi bi-info-circle me-1"></i>
+              Este día tiene descanso de <strong id="blkBreakRange"></strong>.
+              Si tu bloqueo se solapa, se ajustará automáticamente.
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Motivo <span class="text-muted fw-normal">(opcional)</span></label>
+            <input type="text" id="blkReason" class="form-control" placeholder="Ej: María no disponible, mantenimiento...">
+          </div>
+        </div>
+        <p id="blockError" class="text-danger small mt-2 mb-0" style="display:none"></p>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger fw-semibold px-4" onclick="saveBlock()">
+          <i class="bi bi-slash-circle me-1"></i>Bloquear
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Horario ═══ -->
+<div class="modal fade" id="hoursModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold" id="hoursModalTitle"><i class="bi bi-clock me-2"></i>Horario</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">Nombre del horario *</label>
+            <input type="text" id="hName" class="form-control" placeholder="Ej: Horario normal, Verano 2025...">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Días laborables</label>
+            <div class="d-flex gap-2 flex-wrap" id="daysCheckboxes">
+              <!-- filled by JS -->
+            </div>
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-semibold">Hora de apertura *</label>
+            <input type="time" id="hOpen" class="form-control" value="09:00">
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-semibold">Hora de cierre *</label>
+            <input type="time" id="hClose" class="form-control" value="19:00">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Descanso <span class="text-muted fw-normal">(ej. hora de comer — dejar vacío si no hay)</span></label>
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small text-muted">Inicio descanso</label>
+                <input type="time" id="hBreakStart" class="form-control">
+              </div>
+              <div class="col-6">
+                <label class="form-label small text-muted">Fin descanso</label>
+                <input type="time" id="hBreakEnd" class="form-control">
+              </div>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Periodo de validez <span class="text-muted fw-normal">(dejar vacío = siempre aplica)</span></label>
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small text-muted">Desde</label>
+                <input type="date" id="hFrom" class="form-control">
+              </div>
+              <div class="col-6">
+                <label class="form-label small text-muted">Hasta</label>
+                <input type="date" id="hTo" class="form-control">
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-semibold">Prioridad</label>
+            <input type="number" id="hPriority" class="form-control" value="0" min="0">
+            <div class="form-text">Mayor número = mayor prioridad cuando se solapan horarios</div>
+          </div>
+          <div class="col-6 d-flex align-items-end">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="hActive" checked>
+              <label class="form-check-label fw-semibold" for="hActive">Activo</label>
+            </div>
+          </div>
+        </div>
+        <p id="hoursError" class="text-danger small mt-2 mb-0" style="display:none"></p>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary fw-semibold px-4" onclick="saveHours()">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Editar Cliente ═══ -->
+<div class="modal fade" id="clientModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold"><i class="bi bi-person-pencil me-2"></i>Editar Cliente</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <input type="hidden" id="clientEditId">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">Nombre</label>
+            <input type="text" id="clientEditName" class="form-control" placeholder="María García">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Email</label>
+            <input type="email" id="clientEditEmail" class="form-control" placeholder="ejemplo@correo.com">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Notas internas</label>
+            <textarea id="clientEditNotes" class="form-control" rows="3" placeholder="Observaciones sobre este cliente..."></textarea>
+          </div>
+        </div>
+        <p id="clientEditError" class="text-danger small mt-2 mb-0" style="display:none"></p>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary fw-semibold px-4" onclick="saveClient()"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Nuevo/Editar Usuario Admin ═══ -->
+<div class="modal fade" id="userModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold" id="userModalTitle"><i class="bi bi-person-plus me-2"></i>Nuevo Usuario</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <input type="hidden" id="userEditId">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">Usuario *</label>
+            <input type="text" id="userEditUsername" class="form-control" placeholder="nombre_usuario">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Contraseña <span id="userPwHint" class="text-muted fw-normal small">(dejar vacío para no cambiar)</span></label>
+            <input type="password" id="userEditPw" class="form-control" placeholder="••••••••">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Rol *</label>
+            <select id="userEditRole" class="form-select">
+              <option value="viewer">Viewer — solo lectura</option>
+              <option value="admin" selected>Admin — gestión completa</option>
+              <option value="superadmin">Superadmin — acceso total</option>
+            </select>
+          </div>
+          <div class="col-12" id="userActiveRow">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="userEditActive" checked>
+              <label class="form-check-label fw-semibold" for="userEditActive">Cuenta activa</label>
+            </div>
+          </div>
+        </div>
+        <p id="userEditError" class="text-danger small mt-2 mb-0" style="display:none"></p>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary fw-semibold px-4" onclick="saveUser()"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div id="mainToast" class="toast align-items-center text-bg-success border-0 position-fixed bottom-0 end-0 m-3" role="alert" aria-live="assertive" style="z-index:9999">
+  <div class="d-flex">
+    <div class="toast-body fw-semibold"></div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  STATE & CONFIG
+// ═══════════════════════════════════════════════════════════════
+let calendar = null;
+let allServices = [];
+let editingServiceId = null;
+let editingHoursId = null;
+let editingUserId = null;
+let calendarKey = '';
+let currentRole = '';
+
+const DAY_NAMES = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+const PALETTE = ['#6f42c1','#e91e63','#2196f3','#4caf50','#ff9800','#00bcd4','#9c27b0','#795548','#607d8b','#f44336'];
+const STATUS_LABELS = { confirmed:'Confirmada', pending:'Pendiente', completed:'Completada', cancelled:'Cancelada', no_show:'No presentado' };
+const STATUS_CLASS  = { confirmed:'success', pending:'warning text-dark', completed:'secondary', cancelled:'danger', no_show:'dark' };
+
+// ═══════════════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════════════
+const getToken = () => localStorage.getItem('bsToken');
+const authH = () => ({ 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' });
+
+async function doLogin() {
+  const user = document.getElementById('loginUser').value.trim();
+  const pw   = document.getElementById('loginPw').value.trim();
+  const err  = document.getElementById('loginError');
+  err.style.display = 'none';
+  if (!user || !pw) { err.textContent = 'Introduce usuario y contraseña.'; err.style.display = 'block'; return; }
+  try {
+    const res = await fetch('/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:user, password:pw}) });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    localStorage.setItem('bsToken', data.token);
+    await initApp();
+  } catch {
+    err.textContent = 'Usuario o contraseña incorrectos.';
+    err.style.display = 'block';
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('bsToken');
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  if (calendar) { calendar.destroy(); calendar = null; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  API HELPER
+// ═══════════════════════════════════════════════════════════════
+async function api(method, path, body) {
+  const opts = { method, headers: authH() };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  if (res.status === 401) { doLogout(); return null; }
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.detail || `Error ${res.status}`);
+  }
+  return res.json().catch(() => null);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════
+function toast(msg, type='success') {
+  const el = document.getElementById('mainToast');
+  el.className = `toast align-items-center text-bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
+  el.querySelector('.toast-body').textContent = msg;
+  bootstrap.Toast.getOrCreateInstance(el, {delay:3500}).show();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function showSec(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  document.querySelectorAll('[data-sec]').forEach(el => el.classList.toggle('active', el.dataset.sec === name));
+  if (name === 'agenda')       { if (calendar) calendar.render(); }
+  if (name === 'dashboard')    loadDashboard();
+  if (name === 'appointments') loadAppointments();
+  if (name === 'clients')      loadClients();
+  if (name === 'services')     loadServices();
+  if (name === 'hours')        loadHours();
+  if (name === 'integrations') setupIntegrations();
+  if (name === 'users')        loadUsers();
+  if (name === 'views')        loadVisibility();
+  if (name === 'messages')     loadMessages();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+async function initApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+
+  const info = await api('GET', '/admin/api/info');
+  if (!info) return;
+  calendarKey = info.calendar_key;
+  currentRole = info.role;
+  document.getElementById('bizName').textContent = info.business_name;
+  document.title = info.business_name + ' — Admin';
+  const emoji = info.business_emoji || '✂️';
+  document.getElementById('sidebarEmoji').textContent = emoji;
+  document.getElementById('loginEmoji').textContent = emoji;
+  document.getElementById('sidebarUsername').textContent = info.username;
+  const roleLabels = { superadmin: 'Superadmin', admin: 'Admin', viewer: 'Solo lectura' };
+  const roleColors = { superadmin: 'bg-danger', admin: 'bg-primary', viewer: 'bg-secondary' };
+  const badge = document.getElementById('sidebarRoleBadge');
+  badge.textContent = roleLabels[currentRole] || currentRole;
+  badge.className = `badge ms-1 ${roleColors[currentRole] || 'bg-secondary'}`;
+  if (currentRole === 'superadmin') {
+    document.getElementById('navUsers').style.display = '';
+    document.getElementById('navViews').style.display = '';
+  }
+  if (currentRole !== 'viewer') {
+    document.getElementById('navMessages').style.display = '';
+  }
+  // Ocultar botones de escritura si es viewer
+  if (currentRole === 'viewer') {
+    document.querySelectorAll('.role-write').forEach(el => el.style.display = 'none');
+  }
+
+  allServices = await api('GET', '/admin/api/services') || [];
+  populateServiceDropdown();
+  await applyVisibility();
+  initCalendar();
+  showSec('agenda');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (getToken()) initApp().catch(doLogout);
+  document.getElementById('loginPw').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+  document.getElementById('loginUser').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+  buildDayCheckboxes();
+  document.getElementById('blkDate').addEventListener('change', e => _applyBlockTimeLimits(e.target.value));
+  document.getElementById('blkStart').addEventListener('change', e => {
+    const end = document.getElementById('blkEnd');
+    end.min = e.target.value;
+    if (end.value && end.value < e.target.value) end.value = e.target.value;
+    _adjustForBreak();
+  });
+  document.getElementById('blkEnd').addEventListener('change', () => _adjustForBreak());
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  FULLCALENDAR
+// ═══════════════════════════════════════════════════════════════
+function initCalendar() {
+  if (calendar) calendar.destroy();
+  const el = document.getElementById('calendarEl');
+  calendar = new FullCalendar.Calendar(el, {
+    locale: 'es',
+    initialView: 'timeGridWeek',
+    headerToolbar: { left:'prev,next today', center:'title', right:'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
+    views: { listWeek: { buttonText: 'Lista' } },
+    slotMinTime: '07:00:00',
+    slotMaxTime: '22:00:00',
+    slotDuration: '00:30:00',
+    height: 'auto',
+    selectable: true,
+    selectMirror: true,
+    nowIndicator: true,
+    allDaySlot: false,
+    expandRows: true,
+    firstDay: 1,
+    eventTimeFormat: { hour:'2-digit', minute:'2-digit', hour12: false },
+    slotLabelFormat: { hour:'2-digit', minute:'2-digit', hour12: false },
+    events: async (info, ok, fail) => {
+      try {
+        const p = new URLSearchParams({
+          date_from: info.start.toISOString().split('T')[0],
+          date_to:   info.end.toISOString().split('T')[0],
+        });
+        const data = await api('GET', '/admin/api/calendar-events?' + p);
+        ok(data || []);
+      } catch(e) { fail(e); }
+    },
+    select: info => { openNewApptModal(info.start, info.end); calendar.unselect(); },
+    eventClick: info => {
+      const p = info.event.extendedProps;
+      if (p.is_block) {
+        if (confirm(`¿Eliminar el bloqueo "${info.event.title}"?`)) deleteBlock(p.block_id);
+        return;
+      }
+      if (p.is_break) return;
+      openApptDetail(p.appointment_id, info.event.title, p);
+    },
+    eventDidMount: info => {
+      const status = info.event.extendedProps.status;
+      if (status !== 'confirmed' && status !== 'pending') {
+        info.el.style.opacity = '0.6';
+        info.el.style.textDecoration = 'line-through';
+      }
+    },
+  });
+  calendar.render();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+async function loadDashboard() {
+  const stats = await api('GET', '/admin/api/stats') || {};
+  const today = await api('GET', '/admin/api/appointments/today') || [];
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="col-6 col-md-3">
+      <div class="card stat-card p-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="icon" style="background:#e8f4fd"><i class="bi bi-calendar-day text-primary fs-4"></i></div>
+          <div><div class="fs-3 fw-bold text-primary">${stats.today||0}</div><div class="text-muted small">Citas hoy</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat-card p-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="icon" style="background:#fce8f3"><i class="bi bi-calendar-week text-danger fs-4"></i></div>
+          <div><div class="fs-3 fw-bold text-danger">${stats.week||0}</div><div class="text-muted small">Esta semana</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat-card p-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="icon" style="background:#e8f5e9"><i class="bi bi-people text-success fs-4"></i></div>
+          <div><div class="fs-3 fw-bold text-success">${stats.total_clients||0}</div><div class="text-muted small">Clientes</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat-card p-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="icon" style="background:#fff8e1"><i class="bi bi-cash text-warning fs-4"></i></div>
+          <div><div class="fs-3 fw-bold text-warning">${fmtPrice(stats.month_revenue||0)}</div><div class="text-muted small">Este mes</div></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (!today.length) {
+    document.getElementById('todayTable').innerHTML = '<p class="text-muted text-center py-4">No hay citas para hoy.</p>';
+    return;
+  }
+  document.getElementById('todayTable').innerHTML = `
+    <table class="table table-hover mb-0">
+      <thead class="table-light"><tr>
+        <th>Hora</th><th>Cliente</th><th>Servicio</th><th>Estado</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${today.map(a => `
+          <tr>
+            <td><span class="badge bg-primary">${a.time}</span></td>
+            <td><strong>${esc(a.client_name)}</strong><br><small class="text-muted">${esc(a.client_phone)}</small></td>
+            <td>${esc(a.service_name)}</td>
+            <td><span class="badge badge-status-${a.status}">${STATUS_LABELS[a.status]||a.status}</span></td>
+            <td><button class="btn btn-sm btn-outline-primary" onclick="openApptDetailById(${a.id})"><i class="bi bi-eye"></i></button></td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  APPOINTMENTS LIST
+// ═══════════════════════════════════════════════════════════════
+async function loadAppointments() {
+  const from    = document.getElementById('filterFrom')?.value;
+  const to      = document.getElementById('filterTo')?.value;
+  const status  = document.getElementById('filterStatus')?.value;
+  const q       = document.getElementById('filterQ')?.value;
+
+  const params = new URLSearchParams();
+  if (from) params.set('date_from', from);
+  if (to)   params.set('date_to', to);
+  if (status) params.set('status', status);
+  if (q)    params.set('q', q);
+
+  const appts = await api('GET', '/admin/api/appointments?' + params) || [];
+
+  if (!appts.length) {
+    document.getElementById('apptTable').innerHTML = '<p class="text-muted text-center py-4">No se encontraron citas.</p>';
+    return;
+  }
+
+  document.getElementById('apptTable').innerHTML = `
+    <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light"><tr>
+        <th>Fecha y hora</th><th>Cliente</th><th>Servicio</th><th>Precio</th><th>Estado</th><th>Recordatorio</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${appts.map(a => {
+          const dt = new Date(a.scheduled_at);
+          const dateStr = dt.toLocaleDateString('es-ES', {day:'2-digit', month:'2-digit', year:'numeric'});
+          const timeStr = dt.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+          return `<tr>
+            <td><strong>${dateStr}</strong><br><small class="text-muted">${timeStr} (${a.duration} min)</small></td>
+            <td><strong>${esc(a.client_name)}</strong><br><small class="text-muted">${esc(a.client_phone)}</small></td>
+            <td>${esc(a.service_name)}</td>
+            <td>${fmtPrice(a.price)}</td>
+            <td><span class="badge badge-status-${a.status}">${STATUS_LABELS[a.status]||a.status}</span></td>
+            <td>${a.reminder_sent ? '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Enviado</span>' : '<span class="text-muted"><i class="bi bi-clock me-1"></i>Pendiente</span>'}</td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary" onclick="openApptDetailById(${a.id})" title="Ver detalle">
+                <i class="bi bi-eye"></i>
+              </button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>`;
+}
+
+function clearApptFilters() {
+  ['filterFrom','filterTo','filterStatus','filterQ'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  loadAppointments();
+}
+
+async function openApptDetailById(id) {
+  const appts = await api('GET', `/admin/api/appointments?date_from=2000-01-01`) || [];
+  const a = appts.find(x => x.id === id);
+  if (a) openApptDetail(a.id, a.service_name + ' · ' + a.client_name, a);
+}
+
+function openApptDetail(id, title, p) {
+  const dt = new Date(p.scheduled_at || p);
+  const dateStr = typeof p.scheduled_at === 'string'
+    ? new Date(p.scheduled_at).toLocaleString('es-ES', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+    : '--';
+
+  document.getElementById('detailBody').innerHTML = `
+    <div class="row g-2">
+      <div class="col-6"><div class="text-muted small">Cliente</div><div class="fw-bold">${esc(p.client_name)}</div></div>
+      <div class="col-6"><div class="text-muted small">Teléfono</div><div>${esc(p.client_phone)}</div></div>
+      <div class="col-6"><div class="text-muted small">Servicio</div><div class="fw-bold">${esc(p.service_name)}</div></div>
+      <div class="col-6"><div class="text-muted small">Duración</div><div>${p.duration} minutos</div></div>
+      <div class="col-6"><div class="text-muted small">Fecha y hora</div><div class="fw-bold">${dateStr}</div></div>
+      <div class="col-6"><div class="text-muted small">Precio</div><div>${fmtPrice(p.price)}</div></div>
+      <div class="col-6"><div class="text-muted small">Estado</div><div><span class="badge badge-status-${p.status}">${STATUS_LABELS[p.status]||p.status}</span></div></div>
+      <div class="col-12"><div class="text-muted small">Notas</div><div>${p.notes ? esc(p.notes) : '<span class="text-muted">—</span>'}</div></div>
+    </div>`;
+
+  const canAct = currentRole !== 'viewer';
+  document.getElementById('detailFooter').innerHTML = `
+    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cerrar</button>
+    ${canAct ? `
+      <select id="apptStatusSelect" class="form-select form-select-sm" style="width:auto">
+        <option value="confirmed"  ${p.status==='confirmed'  ? 'selected':''}>Confirmada</option>
+        <option value="pending"    ${p.status==='pending'    ? 'selected':''}>Pendiente</option>
+        <option value="completed"  ${p.status==='completed'  ? 'selected':''}>Completada</option>
+        <option value="no_show"    ${p.status==='no_show'    ? 'selected':''}>No presentado</option>
+        <option value="cancelled"  ${p.status==='cancelled'  ? 'selected':''}>Cancelada</option>
+      </select>
+      <button class="btn btn-primary" onclick="updateApptStatus(${id}, document.getElementById('apptStatusSelect').value)">
+        <i class="bi bi-save me-1"></i>Guardar estado
+      </button>
+    ` : ''}`;
+
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('apptDetailModal')).show();
+}
+
+async function updateApptStatus(id, status) {
+  try {
+    await api('PUT', `/admin/api/appointments/${id}`, { status });
+    toast('Estado actualizado correctamente.');
+    bootstrap.Modal.getInstance(document.getElementById('apptDetailModal')).hide();
+    if (calendar) calendar.refetchEvents();
+    if (document.getElementById('sec-dashboard').classList.contains('active')) loadDashboard();
+    if (document.getElementById('sec-appointments').classList.contains('active')) loadAppointments();
+  } catch(e) { toast(e.message, 'danger'); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  NEW APPOINTMENT MODAL
+// ═══════════════════════════════════════════════════════════════
+function populateServiceDropdown() {
+  const sel = document.getElementById('apptService');
+  if (!sel) return;
+  sel.innerHTML = allServices.filter(s=>s.is_active).map(s =>
+    `<option value="${s.id}">${esc(s.name)} (${s.duration_minutes} min — ${fmtPrice(s.price)})</option>`
+  ).join('');
+}
+
+function openNewApptModal(start, end) {
+  editingServiceId = null;
+  document.getElementById('apptModalTitle').innerHTML = '<i class="bi bi-calendar-plus me-2"></i>Nueva Cita';
+  document.getElementById('apptPhone').value = '';
+  document.getElementById('apptName').value = '';
+  document.getElementById('apptNotes').value = '';
+  document.getElementById('clientSuggestion').textContent = '';
+  document.getElementById('apptError').style.display = 'none';
+  populateServiceDropdown();
+
+  if (start) {
+    const d = start instanceof Date ? start : new Date(start);
+    document.getElementById('apptDate').value = d.toISOString().split('T')[0];
+    const h = String(d.getHours()).padStart(2,'0');
+    const m = String(d.getMinutes()).padStart(2,'0');
+    document.getElementById('apptTime').value = `${h}:${m}`;
+  } else {
+    document.getElementById('apptDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('apptTime').value = '10:00';
+  }
+
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('apptModal')).show();
+}
+
+let searchTimeout;
+function searchClient() {
+  clearTimeout(searchTimeout);
+  const phone = document.getElementById('apptPhone').value.trim();
+  if (phone.length < 5) { document.getElementById('clientSuggestion').textContent = ''; return; }
+  searchTimeout = setTimeout(async () => {
+    const clients = await api('GET', `/admin/api/clients?q=${encodeURIComponent(phone)}`) || [];
+    const match = clients.find(c => c.phone.includes(phone.replace(/\D/g,'')));
+    if (match) {
+      document.getElementById('clientSuggestion').textContent = `✓ Cliente encontrado: ${match.name}`;
+      document.getElementById('apptName').value = match.name === 'Sin nombre' ? '' : match.name;
+    } else {
+      document.getElementById('clientSuggestion').textContent = 'Nuevo cliente — se creará automáticamente';
+    }
+  }, 400);
+}
+
+async function saveAppt() {
+  const phone = document.getElementById('apptPhone').value.trim();
+  const name  = document.getElementById('apptName').value.trim();
+  const svc   = document.getElementById('apptService').value;
+  const date  = document.getElementById('apptDate').value;
+  const time  = document.getElementById('apptTime').value;
+  const notes = document.getElementById('apptNotes').value.trim();
+  const err   = document.getElementById('apptError');
+  err.style.display = 'none';
+
+  if (!phone || !svc || !date || !time) { err.textContent='Completa los campos obligatorios.'; err.style.display='block'; return; }
+
+  try {
+    await api('POST', '/admin/api/appointments', {
+      client_phone: phone, client_name: name || null,
+      service_id: parseInt(svc), scheduled_at: `${date}T${time}`,
+      notes: notes || null,
+    });
+    bootstrap.Modal.getInstance(document.getElementById('apptModal')).hide();
+    toast('Cita creada correctamente.');
+    if (calendar) calendar.refetchEvents();
+    if (document.getElementById('sec-appointments').classList.contains('active')) loadAppointments();
+    if (document.getElementById('sec-dashboard').classList.contains('active')) loadDashboard();
+  } catch(e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CLIENTS
+// ═══════════════════════════════════════════════════════════════
+async function loadClients() {
+  const q = document.getElementById('clientSearch')?.value || '';
+  const clients = await api('GET', `/admin/api/clients?q=${encodeURIComponent(q)}`) || [];
+
+  if (!clients.length) {
+    document.getElementById('clientTable').innerHTML = '<p class="text-muted text-center py-4">No hay clientes registrados.</p>';
+    return;
+  }
+
+  document.getElementById('clientTable').innerHTML = `
+    <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light"><tr>
+        <th>Nombre</th><th>Teléfono</th><th>Email</th><th>Citas</th><th>Estado</th><th>Registrado</th><th>Acciones</th>
+      </tr></thead>
+      <tbody>
+        ${clients.map(c => `<tr class="${c.is_blocked ? 'table-danger' : ''}">
+          <td class="fw-semibold">${esc(c.name)}${c.notes ? `<br><small class="text-muted">${esc(c.notes)}</small>` : ''}</td>
+          <td class="font-monospace small">${esc(c.phone)}</td>
+          <td class="small">${c.email ? esc(c.email) : '<span class="text-muted">—</span>'}</td>
+          <td>${c.total_appointments} <span class="badge bg-success">${c.confirmed}</span></td>
+          <td>${c.is_blocked ? '<span class="badge bg-danger"><i class="bi bi-slash-circle me-1"></i>Vetado</span>' : '<span class="badge bg-success">Activo</span>'}</td>
+          <td><small class="text-muted">${c.created_at||'—'}</small></td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="openClientModal(${c.id},'${esc(c.name).replace(/'/g,"\\'")}','${esc(c.email||'').replace(/'/g,"\\'")}','${esc(c.notes||'').replace(/'/g,"\\'")}')">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm ${c.is_blocked ? 'btn-outline-success' : 'btn-outline-warning'} me-1" onclick="toggleClientBlock(${c.id})" title="${c.is_blocked ? 'Desvetar' : 'Vetar'}">
+              <i class="bi bi-${c.is_blocked ? 'check-circle' : 'slash-circle'}"></i>
+            </button>
+            ${currentRole === 'superadmin' ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteClientFn(${c.id},'${esc(c.name).replace(/'/g,"\\'")}')"><i class="bi bi-trash"></i></button>` : ''}
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SERVICES
+// ═══════════════════════════════════════════════════════════════
+async function loadServices() {
+  allServices = await api('GET', '/admin/api/services') || [];
+  populateServiceDropdown();
+
+  document.getElementById('servicesTable').innerHTML = `
+    <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light"><tr>
+        <th>Servicio</th><th>Descripción</th><th>Duración</th><th>Precio</th><th>Estado</th>
+        ${currentRole !== 'viewer' ? '<th>Acciones</th>' : ''}
+      </tr></thead>
+      <tbody>
+        ${allServices.map(s => `<tr>
+          <td class="fw-semibold">${esc(s.name)}</td>
+          <td class="text-muted small">${esc(s.description)}</td>
+          <td>${s.duration_minutes} min</td>
+          <td>${fmtPrice(s.price)}</td>
+          <td><span class="badge ${s.is_active ? 'bg-success' : 'bg-secondary'}">${s.is_active ? 'Activo' : 'Inactivo'}</span></td>
+          ${currentRole !== 'viewer' ? `<td>
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="openServiceModal(${s.id})"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteService(${s.id},'${esc(s.name).replace(/'/g,"\\'")}')"><i class="bi bi-trash"></i></button>
+          </td>` : ''}
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+}
+
+function openServiceModal(id) {
+  editingServiceId = id || null;
+  document.getElementById('serviceModalTitle').innerHTML = id
+    ? '<i class="bi bi-pencil me-2"></i>Editar Servicio'
+    : '<i class="bi bi-scissors me-2"></i>Nuevo Servicio';
+  document.getElementById('svcError').style.display = 'none';
+
+  if (id) {
+    const s = allServices.find(x => x.id === id);
+    if (s) {
+      document.getElementById('svcName').value = s.name;
+      document.getElementById('svcDesc').value = s.description;
+      document.getElementById('svcDuration').value = s.duration_minutes;
+      document.getElementById('svcPrice').value = s.price;
+      document.getElementById('svcActive').checked = s.is_active;
+    }
+  } else {
+    document.getElementById('svcName').value = '';
+    document.getElementById('svcDesc').value = '';
+    document.getElementById('svcDuration').value = 60;
+    document.getElementById('svcPrice').value = 0;
+    document.getElementById('svcActive').checked = true;
+  }
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('serviceModal')).show();
+}
+
+async function saveService() {
+  const body = {
+    name:             document.getElementById('svcName').value.trim(),
+    description:      document.getElementById('svcDesc').value.trim(),
+    duration_minutes: parseInt(document.getElementById('svcDuration').value),
+    price:            parseFloat(document.getElementById('svcPrice').value),
+    is_active:        document.getElementById('svcActive').checked,
+  };
+  const err = document.getElementById('svcError');
+  err.style.display = 'none';
+  if (!body.name) { err.textContent='El nombre es obligatorio.'; err.style.display='block'; return; }
+
+  try {
+    if (editingServiceId) await api('PUT', `/admin/api/services/${editingServiceId}`, body);
+    else                   await api('POST', '/admin/api/services', body);
+    bootstrap.Modal.getInstance(document.getElementById('serviceModal')).hide();
+    toast(editingServiceId ? 'Servicio actualizado.' : 'Servicio creado.');
+    loadServices();
+    if (calendar) calendar.refetchEvents();
+  } catch(e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+async function deleteService(id, name) {
+  if (!confirm(`¿Desactivar el servicio "${name}"? Seguirá apareciendo en citas existentes.`)) return;
+  try {
+    await api('DELETE', `/admin/api/services/${id}`);
+    toast('Servicio desactivado.');
+    loadServices();
+  } catch(e) { toast(e.message, 'danger'); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BUSINESS HOURS
+// ═══════════════════════════════════════════════════════════════
+function buildDayCheckboxes() {
+  const container = document.getElementById('daysCheckboxes');
+  if (!container) return;
+  container.innerHTML = DAY_NAMES.map((d, i) => `
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" id="day${i}" value="${i}" checked>
+      <label class="form-check-label" for="day${i}">${d}</label>
+    </div>`).join('');
+}
+
+function getSelectedDays() {
+  return [0,1,2,3,4,5,6].filter(i => document.getElementById('day'+i)?.checked).join(',');
+}
+
+function setSelectedDays(str) {
+  const active = str.split(',').map(Number);
+  [0,1,2,3,4,5,6].forEach(i => {
+    const el = document.getElementById('day'+i);
+    if (el) el.checked = active.includes(i);
+  });
+}
+
+function renderDayPills(str) {
+  const active = str.split(',').map(Number);
+  return DAY_NAMES.map((d,i) =>
+    `<span class="day-pill ${active.includes(i)?'active':''}" title="${d}">${d[0]}</span>`
+  ).join(' ');
+}
+
+async function loadHours() {
+  const hours = await api('GET', '/admin/api/hours') || [];
+
+  if (!hours.length) {
+    document.getElementById('hoursTable').innerHTML = `
+      <div class="text-center py-4">
+        <i class="bi bi-clock text-muted fs-2 d-block mb-2"></i>
+        <p class="text-muted">No hay horarios configurados.<br>
+        Sin horarios, el bot usa el horario del archivo .env.</p>
+        <button class="btn btn-primary" onclick="openHoursModal()"><i class="bi bi-plus-lg me-1"></i>Crear primer horario</button>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('hoursTable').innerHTML = `
+    <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light"><tr>
+        <th>Nombre</th><th>Días</th><th>Horario</th><th>Periodo</th><th>Prior.</th><th>Estado</th>
+        ${currentRole !== 'viewer' ? '<th>Acciones</th>' : ''}
+      </tr></thead>
+      <tbody>
+        ${hours.map(h => `<tr>
+          <td class="fw-semibold">${esc(h.name)}</td>
+          <td>${renderDayPills(h.working_days)}</td>
+          <td class="font-monospace small">${h.open_time} – ${h.close_time}${h.break_start ? `<br><span class="text-muted small">🍽 ${h.break_start}–${h.break_end}</span>` : ''}</td>
+          <td class="small">${h.valid_from ? `${h.valid_from} → ${h.valid_to||'∞'}` : '<span class="text-muted">Siempre</span>'}</td>
+          <td class="text-center"><span class="badge bg-secondary">${h.priority}</span></td>
+          <td><span class="badge ${h.is_active?'bg-success':'bg-secondary'}">${h.is_active?'Activo':'Inactivo'}</span></td>
+          ${currentRole !== 'viewer' ? `<td>
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="openHoursModal(${h.id})"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteHours(${h.id},'${esc(h.name).replace(/'/g,"\\'")}')"><i class="bi bi-trash"></i></button>
+          </td>` : ''}
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+}
+
+let allHoursCache = [];
+
+function openHoursModal(id) {
+  editingHoursId = id || null;
+  document.getElementById('hoursModalTitle').innerHTML = id
+    ? '<i class="bi bi-pencil me-2"></i>Editar Horario'
+    : '<i class="bi bi-clock me-2"></i>Nuevo Horario';
+  document.getElementById('hoursError').style.display = 'none';
+
+  if (id) {
+    api('GET', '/admin/api/hours').then(hours => {
+      const h = hours.find(x => x.id === id);
+      if (!h) return;
+      document.getElementById('hName').value = h.name;
+      setSelectedDays(h.working_days);
+      document.getElementById('hOpen').value = h.open_time;
+      document.getElementById('hClose').value = h.close_time;
+      document.getElementById('hBreakStart').value = h.break_start || '';
+      document.getElementById('hBreakEnd').value = h.break_end || '';
+      document.getElementById('hFrom').value = h.valid_from || '';
+      document.getElementById('hTo').value = h.valid_to || '';
+      document.getElementById('hPriority').value = h.priority;
+      document.getElementById('hActive').checked = h.is_active;
+    });
+  } else {
+    document.getElementById('hName').value = '';
+    setSelectedDays('0,1,2,3,4,5');
+    document.getElementById('hOpen').value = '09:00';
+    document.getElementById('hClose').value = '19:00';
+    document.getElementById('hBreakStart').value = '';
+    document.getElementById('hBreakEnd').value = '';
+    document.getElementById('hFrom').value = '';
+    document.getElementById('hTo').value = '';
+    document.getElementById('hPriority').value = 0;
+    document.getElementById('hActive').checked = true;
+  }
+
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('hoursModal')).show();
+}
+
+async function saveHours() {
+  const body = {
+    name:         document.getElementById('hName').value.trim(),
+    working_days: getSelectedDays(),
+    open_time:    document.getElementById('hOpen').value,
+    close_time:   document.getElementById('hClose').value,
+    break_start:  document.getElementById('hBreakStart').value || null,
+    break_end:    document.getElementById('hBreakEnd').value || null,
+    valid_from:   document.getElementById('hFrom').value || null,
+    valid_to:     document.getElementById('hTo').value || null,
+    priority:     parseInt(document.getElementById('hPriority').value) || 0,
+    is_active:    document.getElementById('hActive').checked,
+  };
+  const err = document.getElementById('hoursError');
+  err.style.display = 'none';
+  if (!body.name) { err.textContent='El nombre es obligatorio.'; err.style.display='block'; return; }
+  if (!body.working_days) { err.textContent='Selecciona al menos un día.'; err.style.display='block'; return; }
+
+  try {
+    if (editingHoursId) await api('PUT', `/admin/api/hours/${editingHoursId}`, body);
+    else                 await api('POST', '/admin/api/hours', body);
+    bootstrap.Modal.getInstance(document.getElementById('hoursModal')).hide();
+    toast(editingHoursId ? 'Horario actualizado.' : 'Horario creado.');
+    loadHours();
+  } catch(e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+async function deleteHours(id, name) {
+  if (!confirm(`¿Eliminar el horario "${name}"?`)) return;
+  try {
+    await api('DELETE', `/admin/api/hours/${id}`);
+    toast('Horario eliminado.');
+    loadHours();
+  } catch(e) { toast(e.message, 'danger'); }
+}
+
+// ── Time Blocks ──────────────────────────────────────────────────────────────
+
+let _currentBreak = { start: null, end: null };
+
+async function _applyBlockTimeLimits(dateStr) {
+  if (!dateStr) return;
+  try {
+    const h = await api('GET', `/admin/api/hours-for-date?date=${dateStr}`);
+    const blkStart = document.getElementById('blkStart');
+    const blkEnd   = document.getElementById('blkEnd');
+    blkStart.min = h.open_time;
+    blkStart.max = h.close_time;
+    blkEnd.min   = blkStart.value || h.open_time;
+    blkEnd.max   = h.close_time;
+
+    _currentBreak = { start: h.break_start || null, end: h.break_end || null };
+    const info = document.getElementById('blkBreakInfo');
+    if (h.break_start && h.break_end) {
+      document.getElementById('blkBreakRange').textContent = `${h.break_start}–${h.break_end}`;
+      info.style.display = '';
+    } else {
+      info.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+function _adjustForBreak() {
+  const bs = _currentBreak.start, be = _currentBreak.end;
+  if (!bs || !be) return;
+  const start = document.getElementById('blkStart');
+  const end   = document.getElementById('blkEnd');
+  if (!start.value || !end.value) return;
+
+  // Start falls inside break → push to break end
+  if (start.value >= bs && start.value < be) {
+    start.value = be;
+  }
+  // End falls inside break → pull to break start
+  if (end.value > bs && end.value <= be) {
+    end.value = bs;
+  }
+  // Ensure end >= start after adjustments
+  if (end.value && start.value && end.value < start.value) {
+    end.value = start.value;
+  }
+}
+
+function openBlockModal(dateStr) {
+  const today = dateStr || new Date().toISOString().split('T')[0];
+  document.getElementById('blkDate').value = today;
+  document.getElementById('blkStart').value = '';
+  document.getElementById('blkEnd').value = '';
+  document.getElementById('blkReason').value = '';
+  document.getElementById('blockError').style.display = 'none';
+  _applyBlockTimeLimits(today);
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('blockModal')).show();
+}
+
+
+async function saveBlock() {
+  const err = document.getElementById('blockError');
+  err.style.display = 'none';
+  const body = {
+    date:       document.getElementById('blkDate').value,
+    start_time: document.getElementById('blkStart').value,
+    end_time:   document.getElementById('blkEnd').value,
+    reason:     document.getElementById('blkReason').value.trim() || null,
+  };
+  if (!body.date || !body.start_time || !body.end_time) {
+    err.textContent = 'Día, hora inicio y hora fin son obligatorios.';
+    err.style.display = 'block'; return;
+  }
+  if (body.start_time >= body.end_time) {
+    err.textContent = 'La hora de inicio debe ser anterior a la de fin.';
+    err.style.display = 'block'; return;
+  }
+  try {
+    await api('POST', '/admin/api/blocks', body);
+    bootstrap.Modal.getInstance(document.getElementById('blockModal')).hide();
+    toast('Horario bloqueado correctamente.');
+    if (calendar) calendar.refetchEvents();
+  } catch(e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+async function deleteBlock(id) {
+  try {
+    await api('DELETE', `/admin/api/blocks/${id}`);
+    toast('Bloqueo eliminado.');
+    if (calendar) calendar.refetchEvents();
+  } catch(e) { toast(e.message, 'danger'); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INTEGRATIONS
+// ═══════════════════════════════════════════════════════════════
+function setupIntegrations() {
+  const url = `${location.origin}/admin/calendar.ics?key=${encodeURIComponent(calendarKey)}`;
+  document.getElementById('icalUrl').value = url;
+  document.getElementById('icalDownload').href = url;
+  if (currentRole === 'superadmin') {
+    document.getElementById('reminderTestBox').classList.remove('d-none');
+    document.getElementById('emojiConfigBox').classList.remove('d-none');
+
+    // Populate emoji suggestions
+    const suggestions = ['✂️','💅','💆','💇','🌸','💋','👄','🌺','🪷','✨','💫','🩷'];
+    const container = document.getElementById('emojiSuggestions');
+    container.innerHTML = suggestions.map(e =>
+      `<button class="btn btn-sm btn-outline-secondary px-2" onclick="document.getElementById('bizEmojiInput').value='${e}'">${e}</button>`
+    ).join('');
+
+    api('GET', '/admin/api/info').then(info => {
+      document.getElementById('reminderTestPhone').textContent = info?.business_phone || '';
+      document.getElementById('bizEmojiInput').value = info?.business_emoji || '✂️';
+    });
+  }
+}
+
+async function sendTestReminder() {
+  try {
+    const r = await api('POST', '/admin/api/test-reminder');
+    if (r?.ok) toast(`Recordatorio de prueba enviado a ${r.sent_to}`);
+    else toast(r?.error || 'Error al enviar', 'danger');
+  } catch(e) { toast(e.message, 'danger'); }
+}
+
+async function saveBizEmoji() {
+  const emoji = document.getElementById('bizEmojiInput').value.trim();
+  if (!emoji) return;
+  try {
+    await api('PUT', '/admin/api/biz-config', { emoji });
+    document.getElementById('sidebarEmoji').textContent = emoji;
+    document.getElementById('loginEmoji').textContent = emoji;
+    toast('Icono actualizado.');
+  } catch(e) { toast(e.message, 'danger'); }
+}
+
+function copyIcalUrl() {
+  const val = document.getElementById('icalUrl').value;
+  navigator.clipboard.writeText(val).then(() => toast('URL copiada al portapapeles.'));
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════════
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtPrice(n) {
+  if (!n && n !== 0) return '—';
+  return '€ ' + Number(n).toLocaleString('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CLIENT ACTIONS
+// ═══════════════════════════════════════════════════════════════
+function openClientModal(id, name, email, notes) {
+  document.getElementById('clientEditId').value = id;
+  document.getElementById('clientEditName').value = name === 'Sin nombre' ? '' : name;
+  document.getElementById('clientEditEmail').value = email;
+  document.getElementById('clientEditNotes').value = notes;
+  document.getElementById('clientEditError').style.display = 'none';
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('clientModal')).show();
+}
+
+async function saveClient() {
+  const id    = document.getElementById('clientEditId').value;
+  const name  = document.getElementById('clientEditName').value.trim();
+  const email = document.getElementById('clientEditEmail').value.trim();
+  const notes = document.getElementById('clientEditNotes').value.trim();
+  const err   = document.getElementById('clientEditError');
+  err.style.display = 'none';
+  try {
+    await api('PUT', `/admin/api/clients/${id}`, { name: name || null, email: email || null, notes: notes || null });
+    bootstrap.Modal.getInstance(document.getElementById('clientModal')).hide();
+    toast('Cliente actualizado.');
+    loadClients();
+  } catch(e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+async function toggleClientBlock(id) {
+  try {
+    const r = await api('POST', `/admin/api/clients/${id}/block`);
+    toast(r.is_blocked ? 'Cliente vetado.' : 'Cliente desbloqueado.');
+    loadClients();
+  } catch(e) { toast(e.message, 'danger'); }
+}
+
+async function deleteClientFn(id, name) {
+  if (!confirm(`¿Eliminar permanentemente a "${name}" y todas sus citas?`)) return;
+  try {
+    await api('DELETE', `/admin/api/clients/${id}`);
+    toast('Cliente eliminado.');
+    loadClients();
+  } catch(e) { toast(e.message, 'danger'); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MESSAGES
+// ═══════════════════════════════════════════════════════════════
+async function loadMessages() {
+  const msgs = await api('GET', '/admin/api/messages') || [];
+  document.getElementById('messagesForm').innerHTML = msgs.map(m => `
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <label class="form-label fw-semibold mb-1">${esc(m.label)}</label>
+          ${m.hint ? `<div class="text-muted small mb-2">${esc(m.hint)}</div>` : ''}
+          <textarea class="form-control font-monospace" id="msg_${m.key}" rows="${m.value.split('\n').length + 1}">${esc(m.value)}</textarea>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function saveMessages() {
+  const keys = ['blocked','ask_name','welcome_menu','appointment_confirmed_note','appointment_cancelled','no_slots','invalid_option','reminder'];
+  const messages = {};
+  keys.forEach(k => {
+    const el = document.getElementById('msg_' + k);
+    if (el) messages[k] = el.value;
+  });
+  try {
+    await api('PUT', '/admin/api/messages', { messages });
+    toast('Mensajes guardados. Se aplican al instante en el bot.');
+  } catch(e) { toast(e.message, 'danger'); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ROLE VISIBILITY
+// ═══════════════════════════════════════════════════════════════
+const SECTION_LABELS = {
+  agenda: 'Agenda (calendario visual)',
+  dashboard: 'Dashboard (estadísticas)',
+  appointments: 'Lista de Citas',
+  clients: 'Clientes',
+  services: 'Servicios',
+  hours: 'Horarios',
+  integrations: 'Integraciones (iCal)',
+};
+const ALL_SECTIONS = ['agenda','dashboard','appointments','clients','services','hours','integrations'];
+let currentVisibility = { admin: [...ALL_SECTIONS], viewer: [...ALL_SECTIONS] };
+
+async function applyVisibility() {
+  if (currentRole === 'superadmin') return; // superadmin siempre ve todo
+  try {
+    const vis = await api('GET', '/admin/api/visibility');
+    if (!vis) return;
+    const allowed = vis[currentRole] || ALL_SECTIONS;
+    ALL_SECTIONS.forEach(sec => {
+      const navLink = document.querySelector(`[data-sec="${sec}"]`);
+      if (navLink) navLink.parentElement.style.display = allowed.includes(sec) ? '' : 'none';
+    });
+  } catch(_) {}
+}
+
+async function loadVisibility() {
+  const vis = await api('GET', '/admin/api/visibility') || currentVisibility;
+  currentVisibility = vis;
+  document.getElementById('visibilityRows').innerHTML = ALL_SECTIONS.map(sec => `
+    <tr>
+      <td class="fw-semibold"><i class="bi bi-layout-sidebar me-2 text-muted"></i>${SECTION_LABELS[sec]||sec}</td>
+      <td class="text-center">
+        <div class="form-check d-flex justify-content-center mb-0">
+          <input class="form-check-input" type="checkbox" id="vis_admin_${sec}"
+            ${(vis.admin||[]).includes(sec) ? 'checked' : ''}>
+        </div>
+      </td>
+      <td class="text-center">
+        <div class="form-check d-flex justify-content-center mb-0">
+          <input class="form-check-input" type="checkbox" id="vis_viewer_${sec}"
+            ${(vis.viewer||[]).includes(sec) ? 'checked' : ''}>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+async function saveVisibility() {
+  const body = {
+    admin:  ALL_SECTIONS.filter(s => document.getElementById(`vis_admin_${s}`)?.checked),
+    viewer: ALL_SECTIONS.filter(s => document.getElementById(`vis_viewer_${s}`)?.checked),
+  };
+  try {
+    await api('PUT', '/admin/api/visibility', body);
+    toast('Configuración de vistas guardada.');
+    currentVisibility = body;
+  } catch(e) { toast(e.message, 'danger'); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ADMIN USERS
+// ═══════════════════════════════════════════════════════════════
+async function loadUsers() {
+  const users = await api('GET', '/admin/api/users') || [];
+  if (!users.length) {
+    document.getElementById('usersTable').innerHTML = '<p class="text-muted text-center py-4">No hay usuarios.</p>';
+    return;
+  }
+  const ROLE_BADGE = { superadmin: 'bg-danger', admin: 'bg-primary', viewer: 'bg-secondary' };
+  const ROLE_LABEL = { superadmin: 'Superadmin', admin: 'Admin', viewer: 'Viewer' };
+  document.getElementById('usersTable').innerHTML = `
+    <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light"><tr>
+        <th>Usuario</th><th>Rol</th><th>Estado</th><th>Creado</th><th>Acciones</th>
+      </tr></thead>
+      <tbody>
+        ${users.map(u => `<tr>
+          <td class="fw-semibold">${esc(u.username)}</td>
+          <td><span class="badge ${ROLE_BADGE[u.role]||'bg-secondary'}">${ROLE_LABEL[u.role]||u.role}</span></td>
+          <td><span class="badge ${u.is_active ? 'bg-success' : 'bg-secondary'}">${u.is_active ? 'Activo' : 'Inactivo'}</span></td>
+          <td><small class="text-muted">${u.created_at||'—'}</small></td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="openUserModal(${u.id},'${esc(u.username)}','${u.role}',${u.is_active})"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteUserFn(${u.id},'${esc(u.username)}')"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+}
+
+function openUserModal(id, username, role, isActive) {
+  editingUserId = id || null;
+  document.getElementById('userModalTitle').innerHTML = id
+    ? '<i class="bi bi-pencil me-2"></i>Editar Usuario'
+    : '<i class="bi bi-person-plus me-2"></i>Nuevo Usuario';
+  document.getElementById('userEditId').value = id || '';
+  document.getElementById('userEditUsername').value = username || '';
+  document.getElementById('userEditUsername').disabled = !!id;
+  document.getElementById('userEditPw').value = '';
+  document.getElementById('userPwHint').style.display = id ? '' : 'none';
+  document.getElementById('userEditRole').value = role || 'admin';
+  document.getElementById('userEditActive').checked = isActive !== false;
+  document.getElementById('userActiveRow').style.display = id ? '' : 'none';
+  document.getElementById('userEditError').style.display = 'none';
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('userModal')).show();
+}
+
+async function saveUser() {
+  const id   = document.getElementById('userEditId').value;
+  const user = document.getElementById('userEditUsername').value.trim();
+  const pw   = document.getElementById('userEditPw').value;
+  const role = document.getElementById('userEditRole').value;
+  const active = document.getElementById('userEditActive').checked;
+  const err  = document.getElementById('userEditError');
+  err.style.display = 'none';
+
+  try {
+    if (id) {
+      const body = { role };
+      if (pw) body.password = pw;
+      body.is_active = active;
+      await api('PUT', `/admin/api/users/${id}`, body);
+    } else {
+      if (!user) { err.textContent='El usuario es obligatorio.'; err.style.display='block'; return; }
+      if (!pw)   { err.textContent='La contraseña es obligatoria.'; err.style.display='block'; return; }
+      await api('POST', '/admin/api/users', { username: user, password: pw, role });
+    }
+    bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+    toast(id ? 'Usuario actualizado.' : 'Usuario creado.');
+    loadUsers();
+  } catch(e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+async function deleteUserFn(id, username) {
+  if (!confirm(`¿Eliminar el usuario "${username}"?`)) return;
+  try {
+    await api('DELETE', `/admin/api/users/${id}`);
+    toast('Usuario eliminado.');
+    loadUsers();
+  } catch(e) { toast(e.message, 'danger'); }
+}
+</script>
+</body>
+</html>
