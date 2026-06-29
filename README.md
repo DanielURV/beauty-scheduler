@@ -1,4 +1,4 @@
-# Beauty Scheduler — Bot de WhatsApp para citas
+# Beauty Scheduler — Bot de WhatsApp para citas (NO ACABADO)
 
 Bot de agendación automática de citas por WhatsApp para peluquerías, estéticas y centros de belleza.
 
